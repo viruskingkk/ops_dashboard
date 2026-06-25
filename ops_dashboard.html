@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>自動化部署管理介面</title>
+<style>
+:root{
+  --bg-primary:#ffffff;
+  --bg-secondary:#f5f6f8;
+  --bg-info:#e8f1fc;
+  --bg-danger:#fdecec;
+  --bg-warning:#fff7e6;
+  --bg-success:#e9f7ef;
+  --text-primary:#1a1d23;
+  --text-secondary:#666c77;
+  --text-info:#1565c0;
+  --text-danger:#c0392b;
+  --text-warning:#b8860b;
+  --text-success:#1e8e5a;
+  --border-tertiary:#e3e5e8;
+  --border-secondary:#c9ccd1;
+  --border-info:#90c2f0;
+  --border-danger:#f0a8a0;
+  --border-warning:#f0d090;
+  --radius-md:8px;
+  --radius-lg:12px;
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+  --font-mono:"SF Mono",Consolas,"Courier New",monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:#fafbfc;color:var(--text-primary);padding:24px;}
+.app{max-width:760px;margin:0 auto;}
+
+.tabbar{display:flex;gap:4px;border-bottom:1px solid var(--border-tertiary);margin-bottom:20px;}
+.tab{padding:10px 18px;font-size:14px;font-weight:600;border:none;border-bottom:2px solid transparent;background:none;cursor:pointer;color:var(--text-secondary);}
+.tab.on{color:var(--text-primary);border-bottom-color:var(--text-primary);}
+
+.panel{display:none}
+.panel.on{display:block}
+
+.card{background:var(--bg-primary);border:1px solid var(--border-tertiary);border-radius:var(--radius-lg);padding:18px 20px;margin-bottom:16px;box-shadow:0 1px 2px rgba(0,0,0,0.03);}
+.card-title{font-size:12px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:0.04em;margin-bottom:12px;}
+
+.row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;}
+.col{flex:1;min-width:140px;}
+label{font-size:12px;color:var(--text-secondary);display:block;margin-bottom:5px;font-weight:500;}
+select,input[type=text],input[type=password],textarea{
+  width:100%;padding:8px 10px;font-size:13px;
+  border:1px solid var(--border-secondary);border-radius:var(--radius-md);
+  background:var(--bg-primary);color:var(--text-primary);font-family:var(--font-sans);
+}
+textarea{font-family:var(--font-mono);font-size:12px;line-height:1.6;resize:vertical;}
+select:focus,input:focus,textarea:focus{outline:none;border-color:var(--border-info);box-shadow:0 0 0 2px rgba(21,101,192,0.1);}
+
+.help{font-size:11px;color:var(--text-secondary);margin-top:4px;}
+
+.btn{padding:8px 16px;font-size:13px;font-weight:600;border:1px solid var(--border-secondary);border-radius:var(--radius-md);background:var(--bg-primary);color:var(--text-primary);cursor:pointer;transition:background .15s;}
+.btn:hover{background:var(--bg-secondary);}
+.btn-info{border-color:var(--border-info);color:var(--text-info);}
+.btn-info:hover{background:var(--bg-info);}
+.btn-danger{border-color:var(--border-danger);color:var(--text-danger);}
+.btn-danger:hover{background:var(--bg-danger);}
+
+.env-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;}
+.env-lbl{font-size:13px;color:var(--text-secondary);}
+.env-btn{padding:6px 20px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--border-secondary);cursor:pointer;background:var(--bg-primary);color:var(--text-secondary);}
+.env-btn.active-uat{background:var(--bg-info);color:var(--text-info);border-color:var(--border-info);}
+.env-btn.active-prod{background:var(--bg-danger);color:var(--text-danger);border-color:var(--border-danger);}
+
+.conn-info{background:var(--bg-secondary);border-radius:var(--radius-md);padding:10px 12px;margin-bottom:12px;font-size:12px;}
+.conn-info-row{display:flex;gap:8px;margin-bottom:4px;}
+.conn-info-row:last-child{margin-bottom:0;}
+.conn-key{color:var(--text-secondary);min-width:72px;font-weight:600;}
+.mono{font-family:var(--font-mono);}
+
+.prod-box{background:var(--bg-warning);border:1px solid var(--border-warning);border-radius:var(--radius-md);padding:10px 14px;margin:10px 0;}
+.prod-box-title{font-size:12px;font-weight:700;color:var(--text-warning);margin-bottom:6px;}
+.prod-box-sub{font-size:11px;color:var(--text-warning);margin-bottom:8px;}
+
+.status-row{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary);}
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.dot-wait{background:#aab1bb;}
+.dot-run{background:#f59e0b;}
+.dot-ok{background:var(--text-success);}
+.dot-err{background:var(--text-danger);}
+
+.result-box{margin-top:10px;background:var(--bg-secondary);border:1px solid var(--border-tertiary);border-radius:var(--radius-md);padding:10px 12px;font-family:var(--font-mono);font-size:11.5px;white-space:pre-wrap;word-break:break-all;max-height:280px;overflow-y:auto;color:var(--text-primary);}
+.result-box.err{border-color:var(--border-danger);color:var(--text-danger);}
+
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+.chip{padding:6px 11px;border-radius:var(--radius-md);font-size:11.5px;border:1px solid var(--border-tertiary);cursor:pointer;background:var(--bg-primary);color:var(--text-secondary);}
+.chip.on{background:var(--bg-info);color:var(--text-info);border-color:var(--border-info);}
+
+.divider{border:none;border-top:1px solid var(--border-tertiary);margin:14px 0;}
+
+.redis-link{display:flex;align-items:center;gap:8px;padding:9px 11px;background:var(--bg-primary);border:1px solid var(--border-tertiary);border-radius:var(--radius-md);margin-bottom:6px;text-decoration:none;color:var(--text-info);font-size:12px;}
+.redis-link:hover{background:var(--bg-info);}
+.rl-label{flex:1;font-family:var(--font-mono);}
+.rl-host{font-size:11px;opacity:0.65;}
+
+.badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 9px;border-radius:10px;}
+.b-uat{background:var(--bg-info);color:var(--text-info);}
+.b-prod{background:var(--bg-danger);color:var(--text-danger);}
+.b-neutral{background:var(--bg-secondary);color:var(--text-secondary);}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <div class="tabbar" id="tabbar">
+    <button class="tab on" onclick="sw('tidb',this)">TiDB</button>
+    <button class="tab" onclick="sw('redis',this)">Redis</button>
+    <button class="tab" onclick="sw('deploy',this)">部署更新</button>
+  </div>
+
+  <!-- ===================== TIDB ===================== -->
+  <div id="p-tidb" class="panel on">
+
+    <div class="card">
+      <div class="card-title">Ansible 跳板機設定</div>
+      <div class="row">
+        <div class="col" style="flex:2">
+          <label>跳板機 API 位址</label>
+          <input type="text" id="api-host" placeholder="http://your-jumpbox:8765">
+        </div>
+        <div class="col">
+          <label>API Token</label>
+          <input type="password" id="api-token" placeholder="X-API-Token">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button class="btn btn-info" onclick="pingAll()">測試所有連線</button>
+        <div class="status-row" id="ping-status"><span class="dot dot-wait"></span><span>未測試</span></div>
+      </div>
+      <div class="result-box" id="ping-result" style="display:none"></div>
+    </div>
+
+    <div class="card">
+      <div class="env-row">
+        <span class="env-lbl">環境</span>
+        <button class="env-btn active-uat" id="tb-u" onclick="setTbEnv('uat')">UAT</button>
+        <button class="env-btn" id="tb-p" onclick="setTbEnv('prod')">PROD</button>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label>項目</label>
+          <select id="tb-proj" onchange="updateConn()">
+            <option value="pp">PP (tidb-backend)</option>
+            <option value="game">Game (tidb-game)</option>
+          </select>
+        </div>
+        <div class="col">
+          <label>資料庫</label>
+          <select id="tb-db"><option value="">-- 請選擇 --</option></select>
+        </div>
+      </div>
+
+      <div class="conn-info">
+        <div class="conn-info-row"><span class="conn-key">連線</span><span class="mono" id="conn-str">dev-to-tidb-backend.reelx.fun:30040</span></div>
+        <div class="conn-info-row"><span class="conn-key">Playbook</span><span class="mono">playbooks/run_sql.yml</span></div>
+        <div class="conn-info-row"><span class="conn-key">Env key</span><span class="mono" id="conn-env-key">uat_pp</span></div>
+      </div>
+
+      <label>SQL 指令</label>
+      <textarea id="tb-sql" rows="6" placeholder="貼上 SQL 指令，例如：&#10;SELECT * FROM users LIMIT 10;&#10;&#10;UPDATE config SET value='xxx' WHERE key='yyy';"></textarea>
+      <div class="help">指令由跳板機上的 Ansible + mysql-client 執行</div>
+
+      <div class="prod-box" id="tb-prod-box" style="display:none">
+        <div class="prod-box-title">PROD 環境 — 請確認後再執行</div>
+        <div class="row" style="margin:0;gap:8px;align-items:center">
+          <input type="text" id="tb-confirm" placeholder="輸入「確認執行」以繼續" style="flex:1;max-width:200px">
+          <span style="font-size:11px;color:var(--text-warning)" id="tb-sql-op"></span>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:10px;align-items:center">
+        <button class="btn btn-info" onclick="runSql()">執行</button>
+        <button class="btn" onclick="clearSql()">清除</button>
+        <select id="tb-fmt" style="width:auto;padding:7px 8px;font-size:12px">
+          <option value="table">table</option>
+          <option value="json">json</option>
+          <option value="csv">csv</option>
+        </select>
+        <div class="status-row" id="sql-status"><span class="dot dot-wait"></span><span>待執行</span></div>
+      </div>
+
+      <div class="result-box" id="sql-result">-- 結果將顯示在此處 --</div>
+    </div>
+  </div>
+
+  <!-- ===================== REDIS ===================== -->
+  <div id="p-redis" class="panel">
+    <div class="card">
+      <div class="env-row">
+        <span class="env-lbl">環境</span>
+        <button class="env-btn active-uat" id="rd-u" onclick="setRdEnv('uat')">UAT</button>
+        <button class="env-btn" id="rd-p" onclick="setRdEnv('prod')">PROD</button>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label>項目</label>
+          <select id="rd-proj" onchange="renderRedis()">
+            <option value="pp">PP</option>
+            <option value="game">Game</option>
+          </select>
+        </div>
+        <div class="col" style="flex:2">
+          <label>叢集名稱（可多個，逗號分隔）</label>
+          <input type="text" id="rd-custom" placeholder="例：tg103,tg108,tg115" oninput="renderRedis()">
+        </div>
+      </div>
+      <div class="help" style="margin-bottom:12px">Game 項目請輸入叢集名稱，PP 項目固定顯示 pp / wallet</div>
+
+      <div id="rd-links"></div>
+    </div>
+  </div>
+
+  <!-- ===================== DEPLOY ===================== -->
+  <div id="p-deploy" class="panel">
+
+    <div class="card">
+      <div class="card-title">GitLab 設定</div>
+      <div class="row">
+        <div class="col" style="flex:2">
+          <label>GitLab API URL</label>
+          <input type="text" id="gl-url" value="https://git.trevi.cc">
+        </div>
+        <div class="col">
+          <label>Project ID</label>
+          <input type="text" id="gl-pid" placeholder="例：123">
+        </div>
+      </div>
+      <label>Personal Access Token（需要 api scope）</label>
+      <input type="password" id="gl-token" placeholder="glpat-xxxxxxxxxxxxxxxxxxxx">
+      <div class="help">Token 僅存在瀏覽器記憶體，不會上傳至任何伺服器</div>
+    </div>
+
+    <div class="card">
+      <div class="env-row">
+        <span class="env-lbl">環境</span>
+        <button class="env-btn active-uat" id="dp-u" onclick="setDpEnv('uat')">UAT</button>
+        <button class="env-btn" id="dp-p" onclick="setDpEnv('prod')">PROD</button>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <label>類型</label>
+          <select id="dp-type" onchange="updateDpProj()">
+            <option value="game">Game</option>
+            <option value="pp">PP</option>
+          </select>
+        </div>
+        <div class="col">
+          <label>專案</label>
+          <select id="dp-proj" onchange="renderChips()"></select>
+        </div>
+      </div>
+
+      <label>模塊（可多選）</label>
+      <div class="chips" id="chips"></div>
+
+      <hr class="divider">
+
+      <label>Image Tag</label>
+      <input type="text" id="dp-tag" placeholder="例：20260604101012-d4f92ad-14">
+      <div class="help" style="margin-bottom:10px">格式：{YYYYMMDDHHmmSS}-{shortSHA}-{harborSeq}</div>
+
+      <div class="prod-box" id="dp-prod-box" style="display:none">
+        <div class="prod-box-title">PROD 環境 — 雙重確認</div>
+        <div class="prod-box-sub">請確認 Tag 已通過 UAT 驗證，輸入「確認部署」後方可提交</div>
+        <input type="text" id="dp-confirm" placeholder="確認部署" style="max-width:200px">
+      </div>
+
+      <div class="row" style="margin-top:10px;align-items:center">
+        <button class="btn" onclick="previewDeploy()">預覽變更</button>
+        <button class="btn btn-danger" onclick="commitDeploy()">提交 GitLab</button>
+        <div class="status-row" id="dp-status"><span class="dot dot-wait"></span><span>待操作</span></div>
+      </div>
+
+      <div class="result-box" id="dp-result" style="display:none"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let tbEnv='uat', rdEnv='uat', dpEnv='uat';
+let selMods=new Set();
+let pollTimer=null;
+
+const TIDB={
+  uat:{pp:{host:'dev-to-tidb-backend.reelx.fun:30040',key:'uat_pp',dbs:['backend','wallet','activity','config','log']},
+       game:{host:'dev-to-tidb-game.reelx.fun:30020',key:'uat_game',dbs:['game','centersvr','gamesvr','gatesvr','gms','gi']}},
+  prod:{pp:{host:'prod-to-tidb-backend.reelx.fun:30040',key:'prod_pp',dbs:['backend','wallet','activity','config','log']},
+        game:{host:'prod-to-tidb-game.reelx.fun:30020',key:'prod_game',dbs:['game','centersvr','gamesvr','gatesvr','gms','gi']}}
+};
+const PROJECTS={game:['tg001','tg001d','tg002','tg102','tg103','tg104','tg105','tg106','tg108','tg110','tg111','tg112','tg113','tg115','tg117','tg126','tg139'],pp:['pp']};
+const MODULES={game:['game-client-h5-frontend','game-client-pch5-frontend','centersvr-backend','gamesvr-backend','gatesvr-backend','gms-backend','gi-backend','personal-center-web-frontend','chatsvr-backend','livesvr-backend','datasvr-backend','host-frontend'],pp:['backend-console-api-backend','cerberus-backend-api-backend','channel-api-backend','game-backend-api-backend','go-activity','persist-backend','persist-backend-go','retry-backend','transfer-backend','wallet-mock-backend','game-backstage-frontend','operations-center-frontend','risk-control-frontend']};
+
+function sw(name,el){
+  document.querySelectorAll('#tabbar .tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.getElementById('p-'+name).classList.add('on');
+}
+
+const $=id=>document.getElementById(id);
+
+function setStatus(prefix,dotCls,txt){
+  const r=$(prefix+'-status');if(!r)return;
+  r.innerHTML='<span class="dot '+dotCls+'"></span><span>'+txt+'</span>';
+}
+function apiHeaders(){return {'Content-Type':'application/json','X-API-Token':$('api-token').value.trim()};}
+function apiBase(){return $('api-host').value.trim().replace(/\/$/,'');}
+
+function setTbEnv(e){
+  tbEnv=e;
+  $('tb-u').className='env-btn'+(e==='uat'?' active-uat':'');
+  $('tb-p').className='env-btn'+(e==='prod'?' active-prod':'');
+  updateConn();checkTbProd();
+}
+function updateConn(){
+  const proj=$('tb-proj').value;
+  const cfg=TIDB[tbEnv][proj];
+  $('conn-str').textContent=cfg.host;
+  $('conn-env-key').textContent=cfg.key;
+  const sel=$('tb-db');sel.innerHTML='<option value="">-- 請選擇 --</option>';
+  cfg.dbs.forEach(d=>{const o=document.createElement('option');o.value=d;o.textContent=d;sel.appendChild(o);});
+}
+function checkTbProd(){
+  const show=tbEnv==='prod';
+  $('tb-prod-box').style.display=show?'block':'none';
+  if(show){
+    const sql=($('tb-sql').value||'').toUpperCase();
+    const ops=['UPDATE','DELETE','DROP','INSERT','ALTER','TRUNCATE'].filter(o=>sql.includes(o));
+    $('tb-sql-op').textContent=ops.length?'含：'+ops.join(', '):'(SELECT)';
+  }
+}
+
+async function pingAll(){
+  const base=apiBase();if(!base){alert('請填寫跳板機 API 位址');return;}
+  setStatus('ping','dot-run','測試中...');
+  $('ping-result').style.display='none';
+  try{
+    const r=await fetch(base+'/api/sql/ping',{method:'POST',headers:apiHeaders()});
+    const d=await r.json();
+    if(d.job_id) pollJob(d.job_id,'ping');
+    else{setStatus('ping','dot-err','呼叫失敗');showResult('ping-result',d.error||JSON.stringify(d),true);}
+  }catch(e){setStatus('ping','dot-err','無法連線');showResult('ping-result','無法連線至跳板機：'+e.message,true);}
+}
+
+async function runSql(){
+  const base=apiBase();if(!base){alert('請填寫跳板機 API 位址');return;}
+  if(tbEnv==='prod'&&$('tb-confirm').value.trim()!=='確認執行'){alert('PROD 環境請輸入「確認執行」');return;}
+  const sql=$('tb-sql').value.trim();
+  if(!sql){alert('請輸入 SQL 指令');return;}
+  const proj=$('tb-proj').value;
+  const cfg=TIDB[tbEnv][proj];
+  setStatus('sql','dot-run','執行中...');
+  $('sql-result').textContent='送出至 Ansible 跳板機...';
+  $('sql-result').className='result-box';
+  try{
+    const r=await fetch(base+'/api/sql/run',{method:'POST',headers:apiHeaders(),
+      body:JSON.stringify({env:cfg.key,database:$('tb-db').value,sql,format:$('tb-fmt').value})});
+    const d=await r.json();
+    if(r.status===403){setStatus('sql','dot-err','禁止操作');showResult('sql-result','禁止：'+d.error,true);return;}
+    if(d.job_id) pollJob(d.job_id,'sql');
+    else{setStatus('sql','dot-err','失敗');showResult('sql-result',d.error||JSON.stringify(d),true);}
+  }catch(e){setStatus('sql','dot-err','無法連線');showResult('sql-result','無法連線：'+e.message,true);}
+}
+
+function pollJob(jobId,target){
+  clearInterval(pollTimer);
+  const base=apiBase();
+  const resultId=target==='sql'?'sql-result':'ping-result';
+  if(target==='ping') $('ping-result').style.display='block';
+  pollTimer=setInterval(async()=>{
+    try{
+      const r=await fetch(base+'/api/sql/result/'+jobId,{headers:apiHeaders()});
+      const d=await r.json();
+      if(d.status==='done'){
+        clearInterval(pollTimer);
+        setStatus(target,'dot-ok','完成');
+        showResult(resultId,d.stdout,false);
+      }else if(d.status==='error'||d.status==='timeout'){
+        clearInterval(pollTimer);
+        setStatus(target,'dot-err',d.status==='timeout'?'逾時':'錯誤');
+        showResult(resultId,(d.stderr||'')||d.stdout||'發生未知錯誤',true);
+      }else{
+        $(resultId).textContent='['+d.status+'] job: '+jobId+' — 等待中...';
+      }
+    }catch(e){clearInterval(pollTimer);setStatus(target,'dot-err','輪詢失敗');}
+  },1200);
+}
+
+function showResult(id,txt,isErr){
+  const el=$(id);if(!el)return;
+  el.textContent=txt;
+  el.className='result-box'+(isErr?' err':'');
+  el.style.display='block';
+}
+function clearSql(){
+  $('tb-sql').value='';
+  $('sql-result').textContent='-- 結果將顯示在此處 --';
+  $('sql-result').className='result-box';
+  $('tb-confirm').value='';
+  setStatus('sql','dot-wait','待執行');
+}
+
+function setRdEnv(e){
+  rdEnv=e;
+  $('rd-u').className='env-btn'+(e==='uat'?' active-uat':'');
+  $('rd-p').className='env-btn'+(e==='prod'?' active-prod':'');
+  renderRedis();
+}
+function renderRedis(){
+  const proj=$('rd-proj').value;
+  const custom=($('rd-custom').value||'').split(/[,\s]+/).filter(Boolean);
+  const base=rdEnv==='uat'?'https://dev-to-kuboard.reelx.fun/kubernetes/uat':'https://prod-to-kuboard.reelx.fun/kubernetes/prod';
+  let links=[];
+  if(proj==='pp'){
+    links=[{label:'redis-cluster-pp',ns:'redis-cluster-pp',name:'redis-cluster-pp'},
+           {label:'redis-cluster-wallet',ns:'redis-cluster-pp',name:'redis-cluster-wallet'}];
+  }else{
+    custom.forEach(c=>{const n='redis-cluster-'+c;links.push({label:n,ns:n,name:n});});
+  }
+  const isProd=rdEnv==='prod';
+  const hostLabel=rdEnv==='uat'?'dev-to-kuboard.reelx.fun':'prod-to-kuboard.reelx.fun';
+
+  let html='';
+  if(isProd){
+    html+='<div class="prod-box"><div class="prod-box-title">PROD 環境 Kuboard</div></div>';
+  }
+  html+='<div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">';
+  html+='<span class="badge '+(isProd?'b-prod':'b-uat')+'">'+rdEnv.toUpperCase()+'</span>';
+  html+='<span class="badge b-neutral">'+proj.toUpperCase()+'</span>';
+  html+='<span style="font-size:11px;color:var(--text-secondary)">'+links.length+' 個叢集</span>';
+  html+='</div>';
+
+  if(links.length===0){
+    html+='<div style="font-size:12px;color:var(--text-secondary);padding:8px 0">請輸入叢集名稱（如 tg102,tg108）</div>';
+  }else{
+    links.forEach(l=>{
+      const url=base+'/namespace/'+l.ns+'/workload/view/StatefulSet/'+l.name;
+      html+='<a class="redis-link" href="'+url+'" target="_blank"><span class="rl-label">'+l.label+'</span><span class="rl-host">'+hostLabel+'</span></a>';
+    });
+  }
+  $('rd-links').innerHTML=html;
+}
+
+function setDpEnv(e){
+  dpEnv=e;
+  $('dp-u').className='env-btn'+(e==='uat'?' active-uat':'');
+  $('dp-p').className='env-btn'+(e==='prod'?' active-prod':'');
+  $('dp-prod-box').style.display=e==='prod'?'block':'none';
+}
+function updateDpProj(){
+  const type=$('dp-type').value;
+  const sel=$('dp-proj');sel.innerHTML='';
+  PROJECTS[type].forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p.toUpperCase();sel.appendChild(o);});
+  selMods.clear();renderChips();
+}
+function renderChips(){
+  const type=$('dp-type').value;
+  const mods=MODULES[type]||[];
+  $('chips').innerHTML=mods.map(m=>'<div class="chip'+(selMods.has(m)?' on':'')+'" onclick="togMod(\''+m+'\')">'+m+'</div>').join('');
+}
+function togMod(m){selMods.has(m)?selMods.delete(m):selMods.add(m);renderChips();}
+
+function previewDeploy(){
+  if(!selMods.size){alert('請選擇模塊');return;}
+  const tag=$('dp-tag').value.trim();if(!tag){alert('請填入 Image Tag');return;}
+  const proj=$('dp-proj').value,type=$('dp-type').value;
+  const overlay=dpEnv==='uat'?'uat':'prod';
+  const harbor='dev-to-harbor.reelx.fun';
+  let txt='預覽 ['+dpEnv.toUpperCase()+'] '+proj.toUpperCase()+'\n'+'─'.repeat(50)+'\n\n';
+  selMods.forEach(m=>{
+    const imgFull=harbor+'/'+proj+'/'+m+':'+tag;
+    const filePath='game_project/'+(type==='pp'?'pp/game_project/overlays/'+(dpEnv==='uat'?'stage':'prod'):proj+'/game_project/overlays/'+overlay)+'/'+m+'/patch-deployment.yaml';
+    txt+='[ '+m+' ]\n  image : '+imgFull+'\n  file  : '+filePath+'\n\n';
+  });
+  txt+='共 '+selMods.size+' 個模塊，commit 至 main branch';
+  showResult('dp-result',txt,false);
+}
+
+async function commitDeploy(){
+  if(dpEnv==='prod'&&$('dp-confirm').value.trim()!=='確認部署'){alert('PROD 環境請輸入「確認部署」');return;}
+  if(!selMods.size){alert('請選擇模塊');return;}
+  const tag=$('dp-tag').value.trim();if(!tag){alert('請填入 Image Tag');return;}
+  const glUrl=$('gl-url').value.trim();
+  const glPid=$('gl-pid').value.trim();
+  const glTok=$('gl-token').value.trim();
+  if(!glTok){alert('請填入 GitLab Token');return;}
+  if(!glPid){alert('請填入 GitLab Project ID');return;}
+
+  const proj=$('dp-proj').value,type=$('dp-type').value;
+  const overlay=dpEnv==='uat'?'uat':'prod';
+  const harbor='dev-to-harbor.reelx.fun';
+
+  setStatus('dp','dot-run','提交中...');
+  $('dp-result').style.display='block';
+  $('dp-result').textContent='正在呼叫 GitLab API...';
+  $('dp-result').className='result-box';
+
+  const actions=[];
+  selMods.forEach(m=>{
+    const imgFull=harbor+'/'+proj+'/'+m+':'+tag;
+    const overlayPath=type==='pp'
+      ?'game_project/pp/game_project/overlays/'+(dpEnv==='uat'?'stage':'prod')+'/'+m+'/patch-deployment.yaml'
+      :'game_project/'+proj+'/game_project/overlays/'+overlay+'/'+m+'/patch-deployment.yaml';
+    actions.push({module:m,file:overlayPath,image:imgFull});
+  });
+
+  const msg=dpEnv+': update '+proj+' image tag to '+tag+' [auto-commit]';
+  let successCount=0,failLog='';
+
+  for(const act of actions){
+    try{
+      const encPath=encodeURIComponent(act.file);
+      const getR=await fetch(glUrl+'/api/v4/projects/'+glPid+'/repository/files/'+encPath+'?ref=main',
+        {headers:{'PRIVATE-TOKEN':glTok}});
+      if(!getR.ok){failLog+='[FAIL] GET '+act.module+': '+getR.status+' '+getR.statusText+'\n';continue;}
+      const fileData=await getR.json();
+      const oldContent=atob(fileData.content);
+      const newContent=replaceImage(oldContent,act.image);
+      const putR=await fetch(glUrl+'/api/v4/projects/'+glPid+'/repository/files/'+encPath,{
+        method:'PUT',
+        headers:{'PRIVATE-TOKEN':glTok,'Content-Type':'application/json'},
+        body:JSON.stringify({branch:'main',content:newContent,commit_message:msg})
+      });
+      if(putR.ok){successCount++;failLog+='[OK] '+act.module+' -> '+act.image+'\n';}
+      else{const e=await putR.json();failLog+='[FAIL] PUT '+act.module+': '+(e.message||putR.status)+'\n';}
+    }catch(e){failLog+='[FAIL] '+act.module+': '+e.message+'\n';}
+  }
+
+  const isErr=successCount===0;
+  setStatus('dp',isErr?'dot-err':'dot-ok',isErr?'失敗':'完成 '+successCount+'/'+actions.length);
+  showResult('dp-result','GitLab 提交結果 ['+dpEnv.toUpperCase()+']\n'+'─'.repeat(40)+'\n'+failLog+'\ncommit: '+msg,isErr);
+}
+
+function replaceImage(content,newImage){
+  const lines=content.split('\n');
+  let inInit=false,replaced=false;
+  return lines.map(line=>{
+    if(/^\s*initContainers:/.test(line)) inInit=true;
+    if(/^\s*containers:/.test(line)) inInit=false;
+    if(!replaced&&!inInit&&/^\s*image:\s/.test(line)){
+      replaced=true;
+      return line.replace(/image:\s+.+/,'image: '+newImage);
+    }
+    return line;
+  }).join('\n');
+}
+
+updateConn();
+renderRedis();
+updateDpProj();
+
+setTimeout(()=>{$('tb-sql').addEventListener('input',checkTbProd);},50);
+</script>
+</body>
+</html>
